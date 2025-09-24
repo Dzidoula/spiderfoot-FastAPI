@@ -12,7 +12,7 @@ app = FastAPI(title="SpiderFoot FastAPI", description="API to control SpiderFoot
 class ScanRequest(BaseModel):
     scan_name: str
     target: str
-    modules: str = "sfp_dnsresolve,sfp_whois"  # Modules par défaut pour tests rapides
+    modules: str = "sfp_dnsresolve,sfp_whois"  
 
 @app.post("/scan")
 async def run_spiderfoot(request: ScanRequest):
