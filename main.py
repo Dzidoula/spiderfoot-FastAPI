@@ -1,73 +1,151 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-import subprocess
-import json
-import os
-from dotenv import load_dotenv
+import os, requests, json
+from validation import ScanRequest
+app = FastAPI()
 
-load_dotenv()
-
-app = FastAPI(title="SpiderFoot FastAPI", description="API to control SpiderFoot scans")
-
-class ScanRequest(BaseModel):
-    scan_name: str
-    target: str
-    modules: str = "sfp_dnsresolve,sfp_whois"  
+#class ScanRequest(BaseModel):
+#    scan_name: str
+#    target: str
+#    modules: str  # modules séparés par des virgules
 
 @app.post("/scan")
-async def run_spiderfoot(request: ScanRequest):
+def run_spiderfoot(request: ScanRequest):
     try:
-        # Validation des entrées
-        if not request.target or not request.scan_name:
-            raise HTTPException(status_code=400, detail="Scan name and target are required")
-        
-        # Chemin vers SpiderFoot
-        spiderfoot_path = os.getenv("SPIDERFOOT_PATH")
-        if not spiderfoot_path or not os.path.exists(spiderfoot_path):
-            raise HTTPException(status_code=500, detail="SpiderFoot path not found")
+        # Préparer les données pour SpiderFoot API
+        payload = {
+            "scanname": request.scan_name,
+            "scantarget": request.target,
+            "usecase": "all",
+            "modulelist": request.modules,
+            "typelist": request.typelist
+        }
 
-        # Commande SpiderFoot
-        cmd = [
-            "python3", "sf.py",
-            "-s", request.target,
-            "-m", request.modules,
-            "-o", "json",
-            "-q"  # Mode silencieux
-        ]
-        
-        # Exécuter le scan
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            cwd=spiderfoot_path,
-            timeout=300  # Timeout de 5 minutes
-        )
+        headers = {
+            "Accept": "application/json",
+            "Content-Type": "application/x-www-form-urlencoded"
+        }
 
-        # Vérifier le code de retour
-        if result.returncode != 0:
-            raise HTTPException(status_code=500, detail=f"Scan failed: {result.stderr}")
+        # Requête HTTP vers SpiderFoot
+        response = requests.post("http://localhost:5001/startscan", data=payload, headers=headers)
 
-        # Parser la sortie JSON
-        try:
-            output = json.loads(result.stdout)
-        except json.JSONDecodeError:
-            raise HTTPException(status_code=500, detail="Invalid JSON output from SpiderFoot")
+        # Vérification de la réponse
+        if response.status_code != 200:
+            raise HTTPException(status_code=response.status_code, detail=f"Erreur SpiderFoot: {response.text}")
 
+        # Retour JSON structuré
         return {
             "status": "success",
             "scan_name": request.scan_name,
             "target": request.target,
-            "data": output
+            "modules": request.modules.split(","),
+            "spiderfoot_response": response.json()
         }
 
-    except subprocess.TimeoutExpired:
-        raise HTTPException(status_code=504, detail="Scan timed out")
-    except FileNotFoundError:
-        raise HTTPException(status_code=500, detail="SpiderFoot executable not found")
+    except requests.RequestException as e:
+        raise HTTPException(status_code=500, detail=f"Erreur de requête HTTP: {str(e)}")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erreur inattendue: {str(e)}")
+    
+    
+    
 
-@app.get("/health")
-async def health_check():
-    return {"status": "API is running"}
+from fastapi import FastAPI, HTTPException, Query
+from typing import List
+
+
+@app.get("/scanexportjsonmulti")
+def export_multiple_scans(ids: List[str] = Query(...)):
+    try:
+        # Construction de l’URL avec les IDs encodés
+        joined_ids = ",".join(ids)
+        url = f"http://127.0.0.1:5001/scanexportjsonmulti?ids={joined_ids}"
+
+        headers = {
+            "User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:143.0) Gecko/20100101 Firefox/143.0",
+            "Accept": "application/json"
+        }
+
+        response = requests.get(url, headers=headers)
+
+        if response.status_code != 200:
+            raise HTTPException(status_code=response.status_code, detail="Erreur SpiderFoot")
+
+        data = response.json()
+
+        # Sauvegarde dans un fichier
+        output_dir = "scan_exports_json"
+        os.makedirs(output_dir, exist_ok=True)
+        file_path = os.path.join(output_dir, f"multi_export_{'_'.join(ids)}.json")
+
+        with open(file_path, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+
+        return {
+            "status": "success",
+            "scan_ids": ids,
+            "file": file_path,
+            "event_count": len(data),
+            "data": data
+        }
+
+    except requests.RequestException as e:
+        raise HTTPException(status_code=500, detail=f"Erreur HTTP: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erreur inattendue: {str(e)}")
+    
+    
+    
+
+
+
+@app.get("/stopscan/{scan_id}")
+def stop_scan(scan_id: str):
+    try:
+        url = f"http://localhost:5001/stopscan?id={scan_id}"
+        headers = {"Accept": "application/json"}
+
+        response = requests.get(url, headers=headers)
+
+        if response.status_code != 200:
+            raise HTTPException(status_code=response.status_code, detail="Erreur SpiderFoot")
+
+        return {
+            "status": "success",
+            "scan_id": scan_id,
+            "message": "Scan arrêté avec succès",
+            "spiderfoot_response": response.json()
+        }
+
+    except requests.RequestException as e:
+        raise HTTPException(status_code=500, detail=f"Erreur HTTP: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erreur inattendue: {str(e)}")
+    
+
+
+@app.get("/scanlist")
+def get_scan_list():
+    try:
+        url = "http://localhost:5001/scanlist"
+        headers = {"Accept": "application/json"}
+
+        response = requests.get(url, headers=headers)
+
+        if response.status_code != 200:
+            raise HTTPException(status_code=response.status_code, detail="Erreur SpiderFoot")
+
+        scans = response.json()
+
+        return {
+            "status": "success",
+            "scan_count": len(scans),
+            "scans": scans
+        }
+
+    except requests.RequestException as e:
+        raise HTTPException(status_code=500, detail=f"Erreur HTTP: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erreur inattendue: {str(e)}")
+
+

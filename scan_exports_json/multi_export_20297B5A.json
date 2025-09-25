@@ -1,0 +1,12 @@
+[
+  {
+    "data": "alain090901@gmail.com",
+    "event_type": "EMAILADDR",
+    "module": "SpiderFoot UI",
+    "source_data": "alain090901@gmail.com",
+    "false_positive": 0,
+    "last_seen": "2025-09-25 19:18:40",
+    "scan_name": "string",
+    "scan_target": "alain090901@gmail.com"
+  }
+]

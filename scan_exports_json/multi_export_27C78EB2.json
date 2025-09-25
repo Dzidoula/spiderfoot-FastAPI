@@ -1,0 +1,82 @@
+[
+  {
+    "data": "%%\n%% This is the AFNIC Whois server.\n%%\n%% complete date format: YYYY-MM-DDThh:mm:ssZ\n%%\n%% Rights restricted by copyright.\n%% See https://www.afnic.fr/en/domain-names-and-support/everything-there-is-to-know-about-domain-names/find-a-domain-name-or-a-holder-using-whois/\n%%\n%%\n\ndomain:                        odns.fr\r\nstatus:                        ACTIVE\r\neppstatus:                     clientTransferProhibited\r\nhold:                          NO\r\nholder-c:                      O2798-FRNIC\r\nadmin-c:                       O2798-FRNIC\r\ntech-c:                        O2798-FRNIC\r\nregistrar:                     SCALEWAY\r\nExpiry Date:                   2032-09-23T07:52:30Z\r\ncreated:                       2014-09-23T07:52:30Z\r\nlast-update:                   2022-12-30T07:33:31.336114Z\r\nsource:                        FRNIC\r\n\r\nnserver:                       ns1.o2switch.net\r\nnserver:                       ns2.o2switch.net\r\nsource:                        FRNIC\r\n\r\nregistrar:                     SCALEWAY\r\naddress:        ",
+    "event_type": "DOMAIN_WHOIS",
+    "module": "sfp_whois",
+    "source_data": "odns.fr",
+    "false_positive": 0,
+    "last_seen": "2025-09-25 18:42:14",
+    "scan_name": "red",
+    "scan_target": "unstim.bj"
+  },
+  {
+    "data": "109-234-160-141.reverse.odns.fr",
+    "event_type": "INTERNET_NAME",
+    "module": "sfp_dnsresolve",
+    "source_data": "109.234.160.141",
+    "false_positive": 0,
+    "last_seen": "2025-09-25 18:42:13",
+    "scan_name": "red",
+    "scan_target": "unstim.bj"
+  },
+  {
+    "data": "109.234.160.141",
+    "event_type": "IP_ADDRESS",
+    "module": "sfp_dnsresolve",
+    "source_data": "unstim.bj",
+    "false_positive": 0,
+    "last_seen": "2025-09-25 18:42:11",
+    "scan_name": "red",
+    "scan_target": "unstim.bj"
+  },
+  {
+    "data": "SCALEWAY",
+    "event_type": "DOMAIN_REGISTRAR",
+    "module": "sfp_whois",
+    "source_data": "odns.fr",
+    "false_positive": 0,
+    "last_seen": "2025-09-25 18:42:14",
+    "scan_name": "red",
+    "scan_target": "unstim.bj"
+  },
+  {
+    "data": "odns.fr",
+    "event_type": "DOMAIN_NAME_PARENT",
+    "module": "sfp_dnsresolve",
+    "source_data": "109-234-160-141.reverse.odns.fr",
+    "false_positive": 0,
+    "last_seen": "2025-09-25 18:42:13",
+    "scan_name": "red",
+    "scan_target": "unstim.bj"
+  },
+  {
+    "data": "unstim.bj",
+    "event_type": "INTERNET_NAME",
+    "module": "SpiderFoot UI",
+    "source_data": "unstim.bj",
+    "false_positive": 0,
+    "last_seen": "2025-09-25 18:42:10",
+    "scan_name": "red",
+    "scan_target": "unstim.bj"
+  },
+  {
+    "data": "unstim.bj",
+    "event_type": "DOMAIN_NAME",
+    "module": "SpiderFoot UI",
+    "source_data": "unstim.bj",
+    "false_positive": 0,
+    "last_seen": "2025-09-25 18:42:10",
+    "scan_name": "red",
+    "scan_target": "unstim.bj"
+  },
+  {
+    "data": "unstim.bj",
+    "event_type": "DOMAIN_NAME",
+    "module": "sfp_dnsresolve",
+    "source_data": "unstim.bj",
+    "false_positive": 0,
+    "last_seen": "2025-09-25 18:42:11",
+    "scan_name": "red",
+    "scan_target": "unstim.bj"
+  }
+]
