@@ -1,0 +1,22 @@
+[
+  {
+    "data": "alain090901",
+    "event_type": "USERNAME",
+    "module": "sfp_accounts",
+    "source_data": "alain090901@gmail.com",
+    "false_positive": 0,
+    "last_seen": "2025-09-25 20:00:04",
+    "scan_name": "Alain Email",
+    "scan_target": "alain090901@gmail.com"
+  },
+  {
+    "data": "alain090901@gmail.com",
+    "event_type": "EMAILADDR",
+    "module": "SpiderFoot UI",
+    "source_data": "alain090901@gmail.com",
+    "false_positive": 0,
+    "last_seen": "2025-09-25 20:00:00",
+    "scan_name": "Alain Email",
+    "scan_target": "alain090901@gmail.com"
+  }
+]

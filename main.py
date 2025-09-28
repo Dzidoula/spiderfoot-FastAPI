@@ -1,33 +1,50 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException,Request
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-import os, requests, json
-from validation import ScanRequest
+import os, requests, json, re
+from validation import ScanRequest, TYPESLIST
 app = FastAPI()
 
-#class ScanRequest(BaseModel):
-#    scan_name: str
-#    target: str
-#    modules: str  # modules séparés par des virgules
 
-@app.post("/scan")
+
+API_KEY = os.getenv("SPIDERFOOT_API_KEY", "c9b1d2e4-7f8a-4b3c-9d1e-2f3a4b5c6d7e")
+
+BASE_URL = "http://localhost:5001"
+
+@app.middleware("http")
+async def api_key_auth_middleware(request: Request, call_next):
+    key = request.headers.get("X-API-Key")
+    print("key ..... : ", key)
+    print("API_KEY ..... : ", API_KEY)
+    if key != API_KEY:
+        return JSONResponse(
+            status_code=403,
+            content={"error": "Invalid or missing API key."}
+        )
+    return await call_next(request)
+
+
+
+@app.post("/scan",)
 def run_spiderfoot(request: ScanRequest):
     try:
         # Préparer les données pour SpiderFoot API
         payload = {
             "scanname": request.scan_name,
             "scantarget": request.target,
-            "usecase": "all",
+            "usecase": request.use_case,
             "modulelist": request.modules,
-            "typelist": request.typelist
+            "typelist": "" if request.modules else TYPESLIST
         }
 
         headers = {
             "Accept": "application/json",
             "Content-Type": "application/x-www-form-urlencoded"
         }
-
+        
+        url = BASE_URL + "/startscan"
         # Requête HTTP vers SpiderFoot
-        response = requests.post("http://localhost:5001/startscan", data=payload, headers=headers)
+        response = requests.post(url, data=payload, headers=headers)
 
         # Vérification de la réponse
         if response.status_code != 200:
@@ -37,7 +54,7 @@ def run_spiderfoot(request: ScanRequest):
         return {
             "status": "success",
             "scan_name": request.scan_name,
-            "target": request.target,
+            "target": f'"{request.target}"',
             "modules": request.modules.split(","),
             "spiderfoot_response": response.json()
         }
@@ -59,10 +76,9 @@ def export_multiple_scans(ids: List[str] = Query(...)):
     try:
         # Construction de l’URL avec les IDs encodés
         joined_ids = ",".join(ids)
-        url = f"http://127.0.0.1:5001/scanexportjsonmulti?ids={joined_ids}"
+        url = f"{BASE_URL}/scanexportjsonmulti?ids={joined_ids}"
 
         headers = {
-            "User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:143.0) Gecko/20100101 Firefox/143.0",
             "Accept": "application/json"
         }
 
@@ -102,7 +118,7 @@ def export_multiple_scans(ids: List[str] = Query(...)):
 @app.get("/stopscan/{scan_id}")
 def stop_scan(scan_id: str):
     try:
-        url = f"http://localhost:5001/stopscan?id={scan_id}"
+        url = f"{BASE_URL}/stopscan?id={scan_id}"
         headers = {"Accept": "application/json"}
 
         response = requests.get(url, headers=headers)
@@ -127,7 +143,7 @@ def stop_scan(scan_id: str):
 @app.get("/scanlist")
 def get_scan_list():
     try:
-        url = "http://localhost:5001/scanlist"
+        url = f"{BASE_URL}/scanlist"
         headers = {"Accept": "application/json"}
 
         response = requests.get(url, headers=headers)

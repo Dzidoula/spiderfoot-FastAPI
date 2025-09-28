@@ -1,7 +1,0 @@
-Scan Name,Updated,Type,Module,Source,F/P,Data
-atest,2025-09-25 18:34:45,IP_ADDRESS,sfp_dnsresolve,gouv.bj,0,137.255.9.144
-atest,2025-09-25 18:34:47,IPV6_ADDRESS,sfp_dnsresolve,sbin.bj,0,2001:41d0:301::29
-atest,2025-09-25 18:34:44,INTERNET_NAME,SpiderFoot UI,gouv.bj,0,gouv.bj
-atest,2025-09-25 18:34:44,DOMAIN_NAME,SpiderFoot UI,gouv.bj,0,gouv.bj
-atest,2025-09-25 18:34:45,DOMAIN_NAME,sfp_dnsresolve,gouv.bj,0,gouv.bj
-atest,2025-09-25 18:34:47,INTERNET_NAME,sfp_dnsresolve,137.255.9.144,0,sbin.bj
