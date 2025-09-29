@@ -1,258 +1,339 @@
 # SpiderFoot API Wrapper
 
-Une API REST FastAPI qui sert de wrapper pour l'interface SpiderFoot, permettant d'automatiser et de simplifier l'utilisation de SpiderFoot via des appels HTTP.
+A professional FastAPI-based wrapper for SpiderFoot OSINT automation, providing secure API endpoints for managing reconnaissance scans.
 
-## 🚀 Fonctionnalités
+## 📋 Table of Contents
 
-- **Lancement de scans** : Démarrer des scans SpiderFoot avec configuration personnalisée
-- **Gestion des scans** : Lister et arrêter les scans en cours
-- **Export de données** : Exporter les résultats de plusieurs scans au format JSON
-- **Authentification** : Protection par clé API
-- **Validation** : Validation automatique des données d'entrée
+- [Overview](#overview)
+- [Features](#features)
+- [Architecture](#architecture)
+- [Prerequisites](#prerequisites)
+- [Installation](#installation)
+- [Configuration](#configuration)
+- [Usage](#usage)
+- [API Endpoints](#api-endpoints)
+- [Authentication](#authentication)
+- [Error Handling](#error-handling)
+- [Contributing](#contributing)
+- [License](#license)
 
-## 📋 Prérequis
+## 🔍 Overview
+
+This API wrapper simplifies interaction with SpiderFoot by providing a RESTful interface with API key authentication. It enables automated OSINT scanning, status monitoring, and data export capabilities.
+
+## ✨ Features
+
+- **Secure Authentication**: API key-based authentication for all endpoints
+- **Scan Management**: Start, stop, and monitor SpiderFoot scans
+- **Flexible Configuration**: Environment-based configuration (local/production)
+- **Data Export**: Export scan results in JSON format
+- **Multiple Scan Support**: Retrieve and export multiple scans simultaneously
+- **Error Handling**: Comprehensive error handling and validation
+- **Type Safety**: Pydantic models for request validation
+
+## 🏗 Architecture
+
+```
+spiderfoot-api-wrapper/
+├── config/
+│   ├── local.py          # Local environment configuration
+│   └── prod.py           # Production environment configuration
+├── core/
+│   └── setting.py        # Configuration management
+├── scan_exports_json/    # Exported scan results directory
+├── main.py               # FastAPI application
+├── validation.py         # Pydantic models and validation
+├── requirements.txt      # Python dependencies
+└── README.md            # Documentation
+```
+
+## 📦 Prerequisites
 
 - Python 3.8+
-- SpiderFoot installé et configuré (port 5001 par défaut)
-- Les dépendances Python listées dans `requirements.txt`
+- SpiderFoot instance (running locally or remotely)
+- API access to SpiderFoot
 
-## 🛠️ Installation
+## 🚀 Installation
 
-1. Clonez le repository :
+1. Clone the repository:
 ```bash
-git clone <url-du-repo>
+git clone <repository-url>
 cd spiderfoot-api-wrapper
 ```
 
-2. Installez les dépendances :
+2. Create a virtual environment:
+```bash
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+```
+
+3. Install dependencies:
 ```bash
 pip install -r requirements.txt
 ```
 
-3. Configurez la variable d'environnement pour la clé API :
-```bash
-export SPIDERFOOT_API_KEY="votre-cle-api-securisee"
+## ⚙️ Configuration
+
+### Environment Variables
+
+Create configuration files in the `config/` directory:
+
+**config/local.py**
+```python
+SPIDERFOOT_API_KEY = "your-secure-api-key"
+SPIDERFOOT_BASE_URL = "http://localhost:5001"
+DEBUG = True
 ```
 
-4. Assurez-vous que SpiderFoot est en cours d'exécution sur `localhost:5001`
+**config/prod.py**
+```python
+SPIDERFOOT_API_KEY = "your-production-api-key"
+SPIDERFOOT_BASE_URL = "https://your-spiderfoot-instance.com"
+DEBUG = False
+```
 
-## 🚀 Démarrage
+### Configuration Loading
 
-Lancez l'API avec uvicorn :
+The application automatically loads the appropriate configuration based on your environment. Modify `core/setting.py` to customize configuration management.
+
+## 💻 Usage
+
+### Starting the Server
+
 ```bash
 uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-L'API sera accessible sur `http://localhost:8000`
+The API will be available at `http://localhost:8000`
 
-## 📖 Documentation API
+### Interactive API Documentation
 
-### Authentification
+Access the auto-generated API documentation:
+- Swagger UI: `http://localhost:8000/docs`
+- ReDoc: `http://localhost:8000/redoc`
 
-Toutes les requêtes doivent inclure l'en-tête d'authentification :
+## 📡 API Endpoints
+
+### 1. Start a Scan
+
+**POST** `/scan`
+
+Initiates a new SpiderFoot scan.
+
+**Headers:**
 ```
-X-API-Key: votre-cle-api
+x-api-key: your-api-key
+Content-Type: application/json
 ```
 
-### Endpoints
-
-#### 🔍 POST `/scan` - Lancer un scan
-
-Lance un nouveau scan SpiderFoot.
-
-**Body (JSON) :**
+**Request Body:**
 ```json
 {
-  "scan_name": "Mon scan",
+  "scan_name": "Example Scan",
   "target": "example.com",
   "use_case": "Footprint",
-  "modules": "sfp_dnsbrute,sfp_spider"
+  "modules": "sfp_dnsresolve,sfp_whois"
 }
 ```
 
-**Réponse :**
+**cURL Example:**
+```bash
+curl -X POST "http://localhost:8000/scan" \
+  -H "x-api-key: your-api-key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "scan_name": "Example Scan",
+    "target": "example.com",
+    "use_case": "Footprint",
+    "modules": "sfp_dnsresolve,sfp_whois"
+  }'
+```
+
+**Response:**
 ```json
 {
   "status": "success",
-  "scan_name": "Mon scan",
+  "scan_name": "Example Scan",
   "target": "\"example.com\"",
-  "modules": ["sfp_dnsbrute", "sfp_spider"],
-  "spiderfoot_response": {...}
+  "modules": ["sfp_dnsresolve", "sfp_whois"],
+  "spiderfoot_response": { ... }
 }
 ```
 
-#### 📊 GET `/scanlist` - Lister les scans
+### 2. Check Scan Status
 
-Récupère la liste de tous les scans.
+**POST** `/scanstatus/{scan_id}`
 
-**Réponse :**
+Retrieves the status of a specific scan.
+
+**Headers:**
+```
+x-api-key: your-api-key
+```
+
+**cURL Example:**
+```bash
+curl -X POST "http://localhost:8000/scanstatus/abc123" \
+  -H "x-api-key: your-api-key"
+```
+
+**Response:**
+```json
+{
+  "status": "success",
+  "scan_id": "abc123",
+  "message": "Scan status",
+  "spiderfoot_response": { ... }
+}
+```
+
+### 3. Stop a Scan
+
+**GET** `/stopscan/{scan_id}`
+
+Stops a running scan.
+
+**Headers:**
+```
+x-api-key: your-api-key
+```
+
+**cURL Example:**
+```bash
+curl -X GET "http://localhost:8000/stopscan/abc123" \
+  -H "x-api-key: your-api-key"
+```
+
+**Response:**
+```json
+{
+  "status": "success",
+  "scan_id": "abc123",
+  "message": "Scan arrêté avec succès",
+  "spiderfoot_response": { ... }
+}
+```
+
+### 4. List All Scans
+
+**GET** `/scanlist`
+
+Retrieves a list of all scans.
+
+**Headers:**
+```
+x-api-key: your-api-key
+```
+
+**cURL Example:**
+```bash
+curl -X GET "http://localhost:8000/scanlist" \
+  -H "x-api-key: your-api-key"
+```
+
+**Response:**
 ```json
 {
   "status": "success",
   "scan_count": 5,
-  "scans": [...]
+  "scans": [ ... ]
 }
 ```
 
-#### ⏹️ GET `/stopscan/{scan_id}` - Arrêter un scan
+### 5. Export Multiple Scans
 
-Arrête un scan en cours d'exécution.
+**GET** `/scanexportjsonmulti?ids=scan1,scan2`
 
-**Paramètres :**
-- `scan_id` : Identifiant du scan à arrêter
+Exports multiple scan results as JSON.
 
-**Réponse :**
+**Headers:**
+```
+x-api-key: your-api-key
+```
+
+**Query Parameters:**
+- `ids`: Comma-separated list of scan IDs
+
+**cURL Example:**
+```bash
+curl -X GET "http://localhost:8000/scanexportjsonmulti?ids=scan1&ids=scan2&ids=scan3" \
+  -H "x-api-key: your-api-key"
+```
+
+**Alternative (single query parameter):**
+```bash
+curl -X GET "http://localhost:8000/scanexportjsonmulti?ids=scan1,scan2,scan3" \
+  -H "x-api-key: your-api-key"
+```
+
+**Response:**
 ```json
 {
   "status": "success",
-  "scan_id": "12345",
-  "message": "Scan arrêté avec succès",
-  "spiderfoot_response": {...}
-}
-```
-
-#### 📥 GET `/scanexportjsonmulti` - Exporter des scans
-
-Exporte les résultats de plusieurs scans au format JSON.
-
-**Paramètres de requête :**
-- `ids` : Liste des IDs de scans à exporter (répétable)
-
-**Exemple :**
-```
-GET /scanexportjsonmulti?ids=123&ids=456&ids=789
-```
-
-**Réponse :**
-```json
-{
-  "status": "success",
-  "scan_ids": ["123", "456", "789"],
-  "file": "scan_exports_json/multi_export_123_456_789.json",
+  "scan_ids": ["scan1", "scan2"],
+  "file": "scan_exports_json/multi_export_scan1_scan2.json",
   "event_count": 150,
-  "data": [...]
+  "data": [ ... ]
 }
 ```
 
-## 📁 Structure du projet
+## 🔐 Authentication
 
-```
-.
-├── main.py              # Application FastAPI principale
-├── validation.py        # Modèles de validation Pydantic
-├── scan_exports_json/   # Dossier des exports (créé automatiquement)
-└── README.md           # Ce fichier
-```
+All endpoints require authentication via the `x-api-key` header:
 
-## ⚙️ Configuration
-
-### Variables d'environnement
-
-| Variable | Défaut | Description |
-|----------|---------|-------------|
-| `SPIDERFOOT_API_KEY` | `c9b1d2e4-7f8a-4b3c-9d1e-2f3a4b5c6d7e` | Clé API pour l'authentification |
-
-### Configuration SpiderFoot
-
-Assurez-vous que votre instance SpiderFoot :
-- Fonctionne sur `localhost:5001`
-- Accepte les connexions API
-- Est correctement configurée avec les modules nécessaires
-
-## 🔒 Sécurité
-
-- **Authentification requise** : Toutes les requêtes nécessitent une clé API valide
-- **Validation des données** : Les données d'entrée sont validées automatiquement
-- **Gestion d'erreurs** : Gestion robuste des erreurs avec messages appropriés
-
-## 🧪 Tests
-
-### Test avec curl
-
-#### Lancer un scan
 ```bash
-curl -X POST "http://localhost:8000/scan" \
-  -H "Content-Type: application/json" \
-  -H "X-API-Key: votre-cle-api" \
-  -d '{
-    "scan_name": "Test Scan",
-    "target": "example.com",
-    "use_case": "Footprint",
-    "modules": ""
-  }'
+curl -H "x-api-key: your-api-key" http://localhost:8000/scanlist
 ```
 
-#### Lancer un scan avec modules spécifiques
-```bash
-curl -X POST "http://localhost:8000/scan" \
-  -H "Content-Type: application/json" \
-  -H "X-API-Key: votre-cle-api" \
-  -d '{
-    "scan_name": "Scan DNS",
-    "target": "example.com",
-    "use_case": "Investigate",
-    "modules": "sfp_dnsbrute,sfp_spider,sfp_whois"
-  }'
+**Unauthorized Response (403):**
+```json
+{
+  "error": "Invalid or missing API key."
+}
 ```
 
-#### Lister tous les scans
-```bash
-curl -X GET "http://localhost:8000/scanlist" \
-  -H "X-API-Key: votre-cle-api"
+## 🛠 Error Handling
+
+The API provides detailed error responses:
+
+| Status Code | Description |
+|------------|-------------|
+| 200 | Success |
+| 403 | Invalid or missing API key |
+| 404 | Resource not found |
+| 500 | Internal server error |
+
+**Error Response Format:**
+```json
+{
+  "detail": "Error description"
+}
 ```
 
-#### Arrêter un scan spécifique
-```bash
-curl -X GET "http://localhost:8000/stopscan/12345" \
-  -H "X-API-Key: votre-cle-api"
-```
+## 🤝 Contributing
 
-#### Exporter un seul scan
-```bash
-curl -X GET "http://localhost:8000/scanexportjsonmulti?ids=12345" \
-  -H "X-API-Key: votre-cle-api"
-```
+Contributions are welcome! Please follow these steps:
 
-#### Exporter plusieurs scans
-```bash
-curl -X GET "http://localhost:8000/scanexportjsonmulti?ids=12345&ids=67890&ids=11111" \
-  -H "X-API-Key: votre-cle-api"
-```
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-#### Test d'authentification (devrait retourner 403)
-```bash
-curl -X GET "http://localhost:8000/scanlist" \
-  -H "X-API-Key: mauvaise-cle"
-```
+## 📝 License
 
-## 🐛 Dépannage
+This project is licensed under the MIT License - see the LICENSE file for details.
 
-### Erreurs communes
+## 🔗 Resources
 
-1. **403 Forbidden** : Vérifiez que la clé API est correcte dans l'en-tête `X-API-Key`
-2. **500 Internal Server Error** : Vérifiez que SpiderFoot fonctionne sur le port 5001
-3. **Connection refused** : Assurez-vous que SpiderFoot est démarré
+- [SpiderFoot Documentation](https://www.spiderfoot.net/documentation/)
+- [FastAPI Documentation](https://fastapi.tiangolo.com/)
+- [Pydantic Documentation](https://docs.pydantic.dev/)
 
-### Logs
+## 📧 Support
 
-L'API affiche les logs d'authentification dans la console. Surveillez ces messages pour diagnostiquer les problèmes d'accès.
-
-## 🤝 Contribution
-
-Les contributions sont les bienvenues ! N'hésitez pas à :
-- Signaler des bugs
-- Proposer de nouvelles fonctionnalités
-- Améliorer la documentation
-- Soumettre des pull requests
-
-
-## 📞 Support
-
-Pour toute question ou problème :
-- Créez une issue sur le repository
-- Consultez la documentation SpiderFoot officielle
-- Vérifiez les logs d'erreur dans la console
+For issues and questions, please open an issue on the GitHub repository.
 
 ---
 
-**Note** : Cette API est un wrapper pour SpiderFoot. Assurez-vous de respecter les conditions d'utilisation de SpiderFoot et les réglementations locales concernant la reconnaissance et l'analyse de sécurité.
+**Note**: Ensure SpiderFoot is properly configured and running before using this API wrapper.

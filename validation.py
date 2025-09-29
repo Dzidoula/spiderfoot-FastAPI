@@ -28,7 +28,7 @@ def detect_target_type(req: str):
             "asn": r"^AS\d+$",
             "bitcoin_address": r"^[13][a-km-zA-HJ-NP-Z1-9]{25,34}$",
             "username": r"^@?[a-zA-Z0-9_]{3,30}$",
-            "person_name": r"^[A-Z][a-z]+(?:\s[A-Z][a-z]+)+$",
+            "person_name": r"^[A-ZÀ-Ý][a-zà-ÿ']+(?:[\s'-][A-ZÀ-Ý][a-zà-ÿ']+)+$", #r"^[A-Z][a-z]+(?:\s[A-Z][a-z]+)+$",
             "hostname": r"^(?!http)(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}$"
         }
 

@@ -1,33 +1,41 @@
-from fastapi import FastAPI, HTTPException,Request
+from fastapi import FastAPI, HTTPException,Request,Header
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 import os, requests, json, re
+from fastapi import FastAPI, HTTPException, Query
+from typing import List
 from validation import ScanRequest, TYPESLIST
+from core.setting import config
+
+
+
+# Utilisation des constantes
+#print(f"SPIDERFOOT_API_KEY = {config.SPIDERFOOT_API_KEY}")
+#print(f"DEBUG = {config.DEBUG}")
+
+
 app = FastAPI()
 
 
+API_KEY = config.SPIDERFOOT_API_KEY #os.getenv("SPIDERFOOT_API_KEY")
 
-API_KEY = os.getenv("SPIDERFOOT_API_KEY", "c9b1d2e4-7f8a-4b3c-9d1e-2f3a4b5c6d7e")
+#BASE_URL = "http://localhost:5001"
+BASE_URL = config.SPIDERFOOT_BASE_URL #os.getenv("SPIDERFOOT_BASE_URL")
 
-BASE_URL = "http://localhost:5001"
+def verif_authentification(api_key):
+    if not (api_key == API_KEY):
+        return False
+    return True
 
-@app.middleware("http")
-async def api_key_auth_middleware(request: Request, call_next):
-    key = request.headers.get("X-API-Key")
-    print("key ..... : ", key)
-    print("API_KEY ..... : ", API_KEY)
-    if key != API_KEY:
-        return JSONResponse(
-            status_code=403,
-            content={"error": "Invalid or missing API key."}
-        )
-    return await call_next(request)
-
-
-
-@app.post("/scan",)
-def run_spiderfoot(request: ScanRequest):
+@app.post("/scan")
+def run_spiderfoot(request: ScanRequest, x_api_key: str = Header(...)):
     try:
+        
+        if not verif_authentification(x_api_key):
+            return JSONResponse(
+                status_code=403,
+                content={"error": "Invalid or missing API key."}
+            )
         # Préparer les données pour SpiderFoot API
         payload = {
             "scanname": request.scan_name,
@@ -65,15 +73,18 @@ def run_spiderfoot(request: ScanRequest):
         raise HTTPException(status_code=500, detail=f"Erreur inattendue: {str(e)}")
     
     
-    
-
-from fastapi import FastAPI, HTTPException, Query
-from typing import List
 
 
 @app.get("/scanexportjsonmulti")
-def export_multiple_scans(ids: List[str] = Query(...)):
+def export_multiple_scans(ids: List[str] = Query(...), x_api_key: str = Header(...)):
     try:
+        
+        if not verif_authentification(x_api_key):
+            return JSONResponse(
+                status_code=403,
+                content={"error": "Invalid or missing API key."}
+            )
+            
         # Construction de l’URL avec les IDs encodés
         joined_ids = ",".join(ids)
         url = f"{BASE_URL}/scanexportjsonmulti?ids={joined_ids}"
@@ -113,11 +124,48 @@ def export_multiple_scans(ids: List[str] = Query(...)):
     
     
 
+@app.post("/scanstatus/{scan_id}")
+def scan_status(scan_id: str, x_api_key: str = Header(...)):
+    try:
+        
+        if not verif_authentification(x_api_key):
+            return JSONResponse(
+                status_code=403,
+                content={"error": "Invalid or missing API key."}
+            )
+            
+        url = f"{BASE_URL}/scanstatus"
+        headers = {"Accept": "application/json"}
+        payload = {"id":scan_id}
+
+        response = requests.post(url, headers=headers,data=payload)
+
+        if response.status_code != 200:
+            raise HTTPException(status_code=response.status_code, detail="Erreur SpiderFoot")
+
+        return {
+            "status": "success",
+            "scan_id": scan_id,
+            "message": "Scan status",
+            "spiderfoot_response": response.json()
+        }
+
+    except requests.RequestException as e:
+        raise HTTPException(status_code=500, detail=f"Erreur HTTP: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erreur inattendue: {str(e)}")
 
 
 @app.get("/stopscan/{scan_id}")
-def stop_scan(scan_id: str):
+def stop_scan(scan_id: str, x_api_key: str = Header(...)):
     try:
+        
+        if not verif_authentification(x_api_key):
+            return JSONResponse(
+                status_code=403,
+                content={"error": "Invalid or missing API key."}
+            )
+            
         url = f"{BASE_URL}/stopscan?id={scan_id}"
         headers = {"Accept": "application/json"}
 
@@ -141,8 +189,14 @@ def stop_scan(scan_id: str):
 
 
 @app.get("/scanlist")
-def get_scan_list():
+def get_scan_list(x_api_key: str = Header(...)):
     try:
+        if not verif_authentification(x_api_key):
+            return JSONResponse(
+                status_code=403,
+                content={"error": "Invalid or missing API key."}
+            )
+        
         url = f"{BASE_URL}/scanlist"
         headers = {"Accept": "application/json"}
 
