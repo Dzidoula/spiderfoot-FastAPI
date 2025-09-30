@@ -101,16 +101,16 @@ The application automatically loads the appropriate configuration based on your 
 ### Starting the Server
 
 ```bash
-uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+uvicorn main:app --host 0.0.0.0 --port 8043 --reload
 ```
 
-The API will be available at `http://localhost:8000`
+The API will be available at `http://localhost:8043`
 
 ### Interactive API Documentation
 
 Access the auto-generated API documentation:
-- Swagger UI: `http://localhost:8000/docs`
-- ReDoc: `http://localhost:8000/redoc`
+- Swagger UI: `http://localhost:8043/docs`
+- ReDoc: `http://localhost:8043/redoc`
 
 ## 📡 API Endpoints
 
@@ -138,7 +138,7 @@ Content-Type: application/json
 
 **cURL Example:**
 ```bash
-curl -X POST "http://localhost:8000/scan" \
+curl -X POST "http://localhost:8043/scan" \
   -H "x-api-key: your-api-key" \
   -H "Content-Type: application/json" \
   -d '{
@@ -173,7 +173,7 @@ x-api-key: your-api-key
 
 **cURL Example:**
 ```bash
-curl -X POST "http://localhost:8000/scanstatus/abc123" \
+curl -X POST "http://localhost:8043/scanstatus/abc123" \
   -H "x-api-key: your-api-key"
 ```
 
@@ -200,7 +200,7 @@ x-api-key: your-api-key
 
 **cURL Example:**
 ```bash
-curl -X GET "http://localhost:8000/stopscan/abc123" \
+curl -X GET "http://localhost:8043/stopscan/abc123" \
   -H "x-api-key: your-api-key"
 ```
 
@@ -227,7 +227,7 @@ x-api-key: your-api-key
 
 **cURL Example:**
 ```bash
-curl -X GET "http://localhost:8000/scanlist" \
+curl -X GET "http://localhost:8043/scanlist" \
   -H "x-api-key: your-api-key"
 ```
 
@@ -256,13 +256,13 @@ x-api-key: your-api-key
 
 **cURL Example:**
 ```bash
-curl -X GET "http://localhost:8000/scanexportjsonmulti?ids=scan1&ids=scan2&ids=scan3" \
+curl -X GET "http://localhost:8043/scanexportjsonmulti?ids=scan1&ids=scan2&ids=scan3" \
   -H "x-api-key: your-api-key"
 ```
 
 **Alternative (single query parameter):**
 ```bash
-curl -X GET "http://localhost:8000/scanexportjsonmulti?ids=scan1,scan2,scan3" \
+curl -X GET "http://localhost:8043/scanexportjsonmulti?ids=scan1,scan2,scan3" \
   -H "x-api-key: your-api-key"
 ```
 
@@ -282,7 +282,7 @@ curl -X GET "http://localhost:8000/scanexportjsonmulti?ids=scan1,scan2,scan3" \
 All endpoints require authentication via the `x-api-key` header:
 
 ```bash
-curl -H "x-api-key: your-api-key" http://localhost:8000/scanlist
+curl -H "x-api-key: your-api-key" http://localhost:8043/scanlist
 ```
 
 **Unauthorized Response (403):**
