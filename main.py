@@ -7,6 +7,8 @@ from typing import List
 from validation import ScanRequest, TYPESLIST
 from core.setting import config
 
+from requests.auth import HTTPDigestAuth
+
 
 
 # Utilisation des constantes
@@ -196,11 +198,33 @@ def get_scan_list(x_api_key: str = Header(...)):
                 status_code=403,
                 content={"error": "Invalid or missing API key."}
             )
-        
-        url = f"{BASE_URL}/scanlist"
-        headers = {"Accept": "application/json"}
 
-        response = requests.get(url, headers=headers)
+        url =f"{BASE_URL}/scanlist"
+        headers = {
+            "Accept": "application/json"
+        }
+        auth = HTTPDigestAuth("bac", "1234")
+
+        response = requests.get(url, headers=headers, auth=auth)
+
+        print("Status code:", response.status_code)
+        print("Response body:", response.text)
+
+
+                
+        # Méthode HTTP
+        print("Méthode :", response.request.method)
+
+        # URL complète
+        print("URL :", response.request.url)
+
+        # En-têtes envoyés
+        print("Headers :")
+        for k, v in response.request.headers.items():
+            print(f"  {k}: {v}")
+
+        # Corps de la requête (s'il y en a un)
+        print("Body :", response.request.body)
 
         if response.status_code != 200:
             raise HTTPException(status_code=response.status_code, detail="Erreur SpiderFoot")

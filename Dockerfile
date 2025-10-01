@@ -17,4 +17,4 @@ COPY . .
 EXPOSE 8043
 
 # Commande pour lancer l'application avec Gunicorn et Uvicorn
-CMD ["uvicorn", "main:app", "--bind", "0.0.0.0:8043"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port","8043"]

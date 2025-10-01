@@ -11,6 +11,6 @@ except ModuleNotFoundError:
     raise ValueError(f"Configuration inconnue : {env}")
 
 # Utilisation des constantes
-print(f"env = {env}")
+#print(f"env = {env}")
 
 

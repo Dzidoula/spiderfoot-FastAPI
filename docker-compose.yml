@@ -8,8 +8,14 @@ services:
     ports:
       - "8043:8043"
     environment:
-      - SPIDERFOOT_API_KEY=${SPIDERFOOT_API_KEY}
-      - SPIDERFOOT_BASE_URL=http://127.0.0.1:5001
+      - SPIDERFOOT_BASE_URL=http://spiderfoot:5001
       - ENV=prod
+    networks:
+      - spider-net
+
+networks:
+  spider-net:
+    external: true
+    
 
 
