@@ -1,11 +1,11 @@
-from fastapi import FastAPI, HTTPException,Request,Header
-from fastapi.responses import JSONResponse
-from pydantic import BaseModel
-import os, requests, json, re
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException
+from fastapi.security import APIKeyHeader
+from logging import logging
+import os, requests, json
+from fastapi import FastAPI, HTTPException, Query ,Security
 from typing import List
 from validation import ScanRequest, TYPESLIST
-from core.setting import config
+from config.config import settings
 
 from requests.auth import HTTPDigestAuth
 
@@ -16,35 +16,56 @@ from requests.auth import HTTPDigestAuth
 #print(f"DEBUG = {config.DEBUG}")
 
 
-app = FastAPI()
+app = FastAPI(
+    title="SpiderFoot API Wrapper",
+    description="Une API pour interagir avec SpiderFoot via son API REST.",
+    version="0.115.0",
+    contact= { "name": "Vullify"}
+)
 
 
-API_KEY = config.SPIDERFOOT_API_KEY #os.getenv("SPIDERFOOT_API_KEY")
+API_KEY = settings.spiderfoot_api_key #os.getenv("SPIDERFOOT_API_KEY")
+BASE_URL = settings.spiderfoot_base_url #os.getenv("SPIDERFOOT_BASE_URL")
+username = settings.user_name #os.getenv("USER_NAME")
+password = settings.password #os.getenv("PASSWORD")
 
-#BASE_URL = "http://localhost:5001"
-BASE_URL = config.SPIDERFOOT_BASE_URL #os.getenv("SPIDERFOOT_BASE_URL")
 
-def verif_authentification(api_key):
-    if not (api_key == API_KEY):
-        return False
-    return True
+# Si ton SpiderFoot est protégé par authentification HTTPDigest
+AUTH = HTTPDigestAuth(username, password)  # adapte login/pass selon ton cas
+
+
+
+
+
+api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False,description="Clé API pour authentification")
+
+def get_api_key(api_key: str = Security(api_key_header)):
+    if not api_key:
+        raise HTTPException(status_code=401, detail="Clé API manquante")
+    
+    if api_key != API_KEY:
+        raise HTTPException(status_code=403, detail="Clé API invalide")
+    return api_key
+
 
 @app.post("/scan")
-def run_spiderfoot(request: ScanRequest, x_api_key: str = Header(...)):
+def run_spiderfoot(request: ScanRequest, api_key: str=Security(get_api_key)):
     try:
         
-        if not verif_authentification(x_api_key):
-            return JSONResponse(
-                status_code=403,
-                content={"error": "Invalid or missing API key."}
-            )
+        # Gestion flexible des modules
+        modules = (
+            request.modules if isinstance(request.modules, list)
+            else request.modules.split(",") if isinstance(request.modules, str) and request.modules.strip()
+            else []
+        )
+        
         # Préparer les données pour SpiderFoot API
         payload = {
             "scanname": request.scan_name,
             "scantarget": request.target,
             "usecase": request.use_case,
-            "modulelist": request.modules,
-            "typelist": "" if request.modules else TYPESLIST
+            "modulelist": ",".join(modules) if modules else "",
+            "typelist": TYPESLIST if not modules else ""
         }
 
         headers = {
@@ -52,20 +73,23 @@ def run_spiderfoot(request: ScanRequest, x_api_key: str = Header(...)):
             "Content-Type": "application/x-www-form-urlencoded"
         }
         
-        url = BASE_URL + "/startscan"
-        # Requête HTTP vers SpiderFoot
-        response = requests.post(url, data=payload, headers=headers)
+        #url ou lancer le scan dans spiderfoot
+        url = f"{BASE_URL}/startscan"
+        
+        # Faire la requête POST à SpiderFoot
+        response = requests.post(url, data=payload, headers=headers, auth=AUTH)
+        logging.info("scan started")
 
-        # Vérification de la réponse
         if response.status_code != 200:
             raise HTTPException(status_code=response.status_code, detail=f"Erreur SpiderFoot: {response.text}")
+        
+        logging.info("scan started successfully")
 
-        # Retour JSON structuré
         return {
             "status": "success",
             "scan_name": request.scan_name,
-            "target": f'"{request.target}"',
-            "modules": request.modules.split(","),
+            "target": request.target,
+            "modules": modules,
             "spiderfoot_response": response.json()
         }
 
@@ -78,31 +102,20 @@ def run_spiderfoot(request: ScanRequest, x_api_key: str = Header(...)):
 
 
 @app.get("/scanexportjsonmulti")
-def export_multiple_scans(ids: List[str] = Query(...), x_api_key: str = Header(...)):
+def export_multiple_scans(ids: List[str] = Query(...), api_key: str = Security(get_api_key)):
     try:
-        
-        if not verif_authentification(x_api_key):
-            return JSONResponse(
-                status_code=403,
-                content={"error": "Invalid or missing API key."}
-            )
-            
-        # Construction de l’URL avec les IDs encodés
+        # Préparer l'URL avec les IDs
         joined_ids = ",".join(ids)
         url = f"{BASE_URL}/scanexportjsonmulti?ids={joined_ids}"
+        headers = {"Accept": "application/json"}
 
-        headers = {
-            "Accept": "application/json"
-        }
-
-        response = requests.get(url, headers=headers)
+        response = requests.get(url, headers=headers, auth=AUTH)
 
         if response.status_code != 200:
-            raise HTTPException(status_code=response.status_code, detail="Erreur SpiderFoot")
+            raise HTTPException(status_code=response.status_code, detail=f"Erreur SpiderFoot: {response.text}")
 
         data = response.json()
 
-        # Sauvegarde dans un fichier
         output_dir = "scan_exports_json"
         os.makedirs(output_dir, exist_ok=True)
         file_path = os.path.join(output_dir, f"multi_export_{'_'.join(ids)}.json")
@@ -118,6 +131,7 @@ def export_multiple_scans(ids: List[str] = Query(...), x_api_key: str = Header(.
             "data": data
         }
 
+
     except requests.RequestException as e:
         raise HTTPException(status_code=500, detail=f"Erreur HTTP: {str(e)}")
     except Exception as e:
@@ -127,30 +141,24 @@ def export_multiple_scans(ids: List[str] = Query(...), x_api_key: str = Header(.
     
 
 @app.post("/scanstatus/{scan_id}")
-def scan_status(scan_id: str, x_api_key: str = Header(...)):
+def scan_status(scan_id: str, api_key: str =Security(get_api_key)):
     try:
         
-        if not verif_authentification(x_api_key):
-            return JSONResponse(
-                status_code=403,
-                content={"error": "Invalid or missing API key."}
-            )
-            
-        url = f"{BASE_URL}/scanstatus"
+        url = f"{BASE_URL}/scanstatus?id={scan_id}"
         headers = {"Accept": "application/json"}
-        payload = {"id":scan_id}
 
-        response = requests.post(url, headers=headers,data=payload)
+        response = requests.get(url, headers=headers, auth=AUTH)
 
         if response.status_code != 200:
-            raise HTTPException(status_code=response.status_code, detail="Erreur SpiderFoot")
+            raise HTTPException(status_code=response.status_code, detail=f"Erreur SpiderFoot: {response.text}")
 
         return {
             "status": "success",
             "scan_id": scan_id,
-            "message": "Scan status",
+            "message": "Scan status récupéré",
             "spiderfoot_response": response.json()
         }
+
 
     except requests.RequestException as e:
         raise HTTPException(status_code=500, detail=f"Erreur HTTP: {str(e)}")
@@ -159,22 +167,18 @@ def scan_status(scan_id: str, x_api_key: str = Header(...)):
 
 
 @app.get("/stopscan/{scan_id}")
-def stop_scan(scan_id: str, x_api_key: str = Header(...)):
+def stop_scan(scan_id: str, api_key: str = Security(get_api_key)):
     try:
         
-        if not verif_authentification(x_api_key):
-            return JSONResponse(
-                status_code=403,
-                content={"error": "Invalid or missing API key."}
-            )
+       
             
         url = f"{BASE_URL}/stopscan?id={scan_id}"
         headers = {"Accept": "application/json"}
 
-        response = requests.get(url, headers=headers)
+        response = requests.get(url, headers=headers, auth=AUTH)
 
         if response.status_code != 200:
-            raise HTTPException(status_code=response.status_code, detail="Erreur SpiderFoot")
+            raise HTTPException(status_code=response.status_code, detail=f"Erreur SpiderFoot: {response.text}")
 
         return {
             "status": "success",
@@ -182,6 +186,7 @@ def stop_scan(scan_id: str, x_api_key: str = Header(...)):
             "message": "Scan arrêté avec succès",
             "spiderfoot_response": response.json()
         }
+
 
     except requests.RequestException as e:
         raise HTTPException(status_code=500, detail=f"Erreur HTTP: {str(e)}")
@@ -191,43 +196,15 @@ def stop_scan(scan_id: str, x_api_key: str = Header(...)):
 
 
 @app.get("/scanlist")
-def get_scan_list(x_api_key: str = Header(...)):
+def get_scan_list(api_key: str = Security(get_api_key)):
     try:
-        if not verif_authentification(x_api_key):
-            return JSONResponse(
-                status_code=403,
-                content={"error": "Invalid or missing API key."}
-            )
+        url = f"{BASE_URL}/scanlist"
+        headers = {"Accept": "application/json"}
 
-        url =f"{BASE_URL}/scanlist"
-        headers = {
-            "Accept": "application/json"
-        }
-        auth = HTTPDigestAuth("bac", "1234")
-
-        response = requests.get(url, headers=headers, auth=auth)
-
-        print("Status code:", response.status_code)
-        print("Response body:", response.text)
-
-
-                
-        # Méthode HTTP
-        print("Méthode :", response.request.method)
-
-        # URL complète
-        print("URL :", response.request.url)
-
-        # En-têtes envoyés
-        print("Headers :")
-        for k, v in response.request.headers.items():
-            print(f"  {k}: {v}")
-
-        # Corps de la requête (s'il y en a un)
-        print("Body :", response.request.body)
+        response = requests.get(url, headers=headers, auth=AUTH)
 
         if response.status_code != 200:
-            raise HTTPException(status_code=response.status_code, detail="Erreur SpiderFoot")
+            raise HTTPException(status_code=response.status_code, detail=f"Erreur SpiderFoot: {response.text}")
 
         scans = response.json()
 
