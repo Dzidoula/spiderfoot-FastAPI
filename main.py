@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.security import APIKeyHeader
-from logging import logging
+from fastapi.responses import FileResponse
+import logging
 import os, requests, json
 from fastapi import FastAPI, HTTPException, Query ,Security
 from typing import List
@@ -14,6 +15,12 @@ from requests.auth import HTTPDigestAuth
 # Utilisation des constantes
 #print(f"SPIDERFOOT_API_KEY = {config.SPIDERFOOT_API_KEY}")
 #print(f"DEBUG = {config.DEBUG}")
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(levelname)s:     %(asctime)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 
 app = FastAPI(
@@ -78,12 +85,12 @@ def run_spiderfoot(request: ScanRequest, api_key: str=Security(get_api_key)):
         
         # Faire la requête POST à SpiderFoot
         response = requests.post(url, data=payload, headers=headers, auth=AUTH)
-        logging.info("scan started")
+        logger.info("scan started")
 
         if response.status_code != 200:
             raise HTTPException(status_code=response.status_code, detail=f"Erreur SpiderFoot: {response.text}")
         
-        logging.info("scan started successfully")
+        logger.info("scan started successfully")
 
         return {
             "status": "success",
@@ -118,11 +125,21 @@ def export_multiple_scans(ids: List[str] = Query(...), api_key: str = Security(g
 
         output_dir = "scan_exports_json"
         os.makedirs(output_dir, exist_ok=True)
-        file_path = os.path.join(output_dir, f"multi_export_{'_'.join(ids)}.json")
+        file_name = f"multi_export_{'_'.join(ids)}.json"
+        file_path = os.path.join(output_dir, file_name)
 
         with open(file_path, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
 
+        if os.path.exists(file_path):
+            logger.info("successfully exported ...")
+            return FileResponse(
+                path=file_path,
+                media_type="application/json",
+                filename=file_name,
+                headers={"Content-Disposition": f"attachment; filename={file_name}"}
+            )
+            
         return {
             "status": "success",
             "scan_ids": ids,
@@ -152,13 +169,16 @@ def scan_status(scan_id: str, api_key: str =Security(get_api_key)):
         if response.status_code != 200:
             raise HTTPException(status_code=response.status_code, detail=f"Erreur SpiderFoot: {response.text}")
 
+        satus_result = [status for status in response.json() if status in ["FINISHED", "RUNNING"]]
+        logger.info(f"scan status {satus_result}")
         return {
             "status": "success",
             "scan_id": scan_id,
             "message": "Scan status récupéré",
-            "spiderfoot_response": response.json()
+            "spiderfoot_response": satus_result
         }
 
+        
 
     except requests.RequestException as e:
         raise HTTPException(status_code=500, detail=f"Erreur HTTP: {str(e)}")
@@ -179,7 +199,10 @@ def stop_scan(scan_id: str, api_key: str = Security(get_api_key)):
 
         if response.status_code != 200:
             raise HTTPException(status_code=response.status_code, detail=f"Erreur SpiderFoot: {response.text}")
-
+        
+        
+        logger.info(f"scan with id :  {scan_id} , is successfully stopped")
+        
         return {
             "status": "success",
             "scan_id": scan_id,
@@ -208,6 +231,8 @@ def get_scan_list(api_key: str = Security(get_api_key)):
 
         scans = response.json()
 
+        logger.info(f"scan list :  {scans}")
+        
         return {
             "status": "success",
             "scan_count": len(scans),
