@@ -131,14 +131,14 @@ def export_multiple_scans(ids: List[str] = Query(...), api_key: str = Security(g
         with open(file_path, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
 
-        if os.path.exists(file_path):
-            logger.info("successfully exported ...")
-            return FileResponse(
-                path=file_path,
-                media_type="application/json",
-                filename=file_name,
-                headers={"Content-Disposition": f"attachment; filename={file_name}"}
-            )
+        #if os.path.exists(file_path):
+        #   logger.info("successfully exported ...")
+        #    return FileResponse(
+        #        path=file_path,
+        #        media_type="application/json",
+        #        filename=file_name,
+        #        headers={"Content-Disposition": f"attachment; filename={file_name}"}
+        #    )
             
         return {
             "status": "success",
