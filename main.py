@@ -3,12 +3,16 @@ from fastapi.security import APIKeyHeader
 from fastapi.responses import FileResponse
 import logging
 import os, requests, json
-from fastapi import FastAPI, HTTPException, Query ,Security
+from fastapi import FastAPI, HTTPException, Query ,Security ,Depends
 from typing import List
 from validation import ScanRequest, TYPESLIST
 from config.config import settings
 
 from requests.auth import HTTPDigestAuth
+
+from fastapi.openapi.docs import get_swagger_ui_html, get_redoc_html
+from auth import authenticate_basic_auth  # Importez la fonction d'auth
+
 
 
 
@@ -27,7 +31,9 @@ app = FastAPI(
     title="SpiderFoot API Wrapper",
     description="Une API pour interagir avec SpiderFoot via son API REST.",
     version="0.115.0",
-    contact= { "name": "Vullify"}
+    contact= { "name": "Vullify"},
+    docs_url=None,  # Désactive la route docs par défaut
+    redoc_url=None, # Désactive la route redoc par défaut
 )
 
 
@@ -55,6 +61,25 @@ def get_api_key(api_key: str = Security(api_key_header)):
     return api_key
 
 
+# Surcharger les routes de documentation pour y ajouter l'authentification
+
+#endpoint swagger protégé par authentification de base
+@app.get("/docs", include_in_schema=False)
+async def get_swagger_documentation(username: str = Depends(authenticate_basic_auth)):
+    return get_swagger_ui_html(openapi_url="/openapi.json", title="Docs")
+
+#endpoint redoc protégé par authentification de base
+@app.get("/redoc", include_in_schema=False)
+async def get_redoc_documentation(username: str = Depends(authenticate_basic_auth)):
+    return get_redoc_html(openapi_url="/openapi.json", title="ReDoc")
+
+# Protéger également le schéma OpenAPI JSON lui-même
+@app.get("/openapi.json", include_in_schema=False)
+async def get_open_api_endpoint(username: str = Depends(authenticate_basic_auth)):
+    from main import app
+    return app.openapi()
+
+#endpoint pour lancer un scan
 @app.post("/scan")
 def run_spiderfoot(request: ScanRequest, api_key: str=Security(get_api_key)):
     try:

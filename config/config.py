@@ -6,6 +6,9 @@ class Settings(BaseSettings):
     spiderfoot_base_url: str
     user_name: str 
     password: str
+    
+    v_username: str
+    v_password: str
 
     class Config:
         env_file = ".env"  # lire le fichier .env automatiquement
